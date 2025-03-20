@@ -2,6 +2,7 @@ import { polls } from "..";
 import { Poll } from "../../lib/Poll";
 
 
+
 export default (req, res) => {
     // Method check
     if (req.method === "POST") {
