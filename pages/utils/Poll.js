@@ -13,7 +13,7 @@ export class Poll {
         this.closed = true;
     }
     add_vote(vote) {
-        if (!closed) {
+        if (!this.closed) {
             this.votes.push(vote);
             console.log(`Vote from ${vote.username} registered`);
         } else {
