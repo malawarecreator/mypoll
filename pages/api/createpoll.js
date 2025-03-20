@@ -1,5 +1,5 @@
 import { polls } from "..";
-import { Poll } from "../utils/Poll";
+import { Poll } from "../../utils/Poll";
 
 
 export default (req, res) => {

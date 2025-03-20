@@ -1,5 +1,5 @@
 import { polls } from "..";
-import { Vote } from "../utils/Vote";
+import { Vote } from "../../utils/Vote";
 
 export default (req, res) => {
     if (req.method === "POST") {
