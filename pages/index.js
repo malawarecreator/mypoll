@@ -1,7 +1,8 @@
 import Head from 'next/head'
 import styles from '../styles/Home.module.css'
 import { useState } from 'react'
-export let polls = [];
+global.polls = global.polls || [];
+export let polls = global.polls;
 export default function Home() {
   let [pollCreatorOn, setPollCreatorOn] = useState(false);
   
