@@ -2,6 +2,7 @@ import Head from 'next/head'
 import styles from '../styles/Home.module.css'
 import { useState } from 'react'
 import { Analytics } from '@vercel/analytics/react';
+import { SpeedInsights } from "@vercel/speed-insights/next"
 global.polls = global.polls || [];
 export let polls = global.polls;
 export default function Home() {
@@ -18,6 +19,7 @@ export default function Home() {
       <h1 className='title'>MyPoll</h1>
       
       <Analytics/>
+      <SpeedInsights/>
 
       
     </div>
