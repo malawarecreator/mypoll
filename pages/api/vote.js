@@ -5,18 +5,18 @@ export default async (req, res) => {
     const { name, options, optionIndex } = req.body;
 
     if (!name) {
-      res.status(400).json({ message: "Missing poll name" });
+      res.status(400).json({ message: "Missing 'name' parameter" });
       return;
     }
 
     try {
       const client = await clientPromise;
-      const db = client.db("polls"); // Use the "polls" database
-      const pollsCollection = db.collection("polls"); // Use the "polls" collection
+      const db = client.db("polls");
+      const pollsCollection = db.collection("polls");
 
       const poll = await pollsCollection.findOne({ name });
       if (!poll) {
-        res.status(404).json({ message: "No such poll" });
+        res.status(404).json({ message: "No such poll found" });
         return;
       }
 
@@ -33,6 +33,11 @@ export default async (req, res) => {
 
       // If `optionIndex` is provided, update the votes
       if (typeof optionIndex === "number") {
+        if (!Array.isArray(poll.votes) || poll.votes.length !== poll.options.length) {
+          res.status(500).json({ message: "Poll data is corrupted" });
+          return;
+        }
+
         if (optionIndex < 0 || optionIndex >= poll.options.length) {
           res.status(400).json({ message: "Invalid option index" });
           return;
@@ -50,9 +55,9 @@ export default async (req, res) => {
         return;
       }
 
-      res.status(400).json({ message: "Missing options or optionIndex" });
+      res.status(400).json({ message: "Missing 'options' or 'optionIndex' parameter" });
     } catch (error) {
-      console.error(error);
+      console.error("Error updating poll votes:", error.message);
       res.status(500).json({ message: "Internal Server Error" });
     }
   } else {
