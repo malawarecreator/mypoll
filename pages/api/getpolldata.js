@@ -1,25 +1,31 @@
-import { polls } from "..";
+import clientPromise from "../../lib/db";
 
-export default (req, res) => {
+export default async (req, res) => {
+  if (req.method === "GET") {
+    const { name } = req.query;
 
-    // Method check
-    if (req.method === "GET") {
-        let {name} = req.query;
-        if (!name) {
-            res.status(400).json({message: "Missing Params"}); // Send 400 (bad request) if missing params
-        } else {
-            for (let i = 0; i < polls.length; i++) {
-                if (polls[i].name === name) {
-                    res.status(200).json({name: polls[i].name, options: polls[i].options, votes: polls[i].votes, closed: polls[i].closed}); // If poll present in polls list, returns poll data 
-                    
-                } 
-            }
-
-            res.status(400).json({message: "No such poll"}); // If no such poll, simply sends 400 (bad request) 
-        }
-        
-    } else {
-        res.status(400).json({message: "This is a GET-only endpoint"}); // Send 400 (bad request) if wrong method
-
+    if (!name) {
+      res.status(400).json({ message: "Missing Params" });
+      return;
     }
-}
+
+    try {
+      const client = await clientPromise;
+      const db = client.db("polls"); // Use the "polls" database
+      const pollsCollection = db.collection("polls"); // Use the "polls" collection
+
+      const poll = await pollsCollection.findOne({ name });
+      if (!poll) {
+        res.status(404).json({ message: "No such poll" });
+        return;
+      }
+
+      res.status(200).json(poll);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  } else {
+    res.status(400).json({ message: "This is a GET-only endpoint" });
+  }
+};

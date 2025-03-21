@@ -1,35 +1,61 @@
-import { polls } from "..";
-import { Vote } from "../../lib/Vote";
+import clientPromise from "../../lib/db";
 
-export default (req, res) => {
-    if (req.method === "POST") {
-        let { username, parent, choice } = req.body;
-        if (!(username && parent && choice)) {
-            res.status(400).json({ message: "Missing fields" }); // Send 400 (bad request) if missing fields
-            return;
-        }
+export default async (req, res) => {
+  if (req.method === "POST") {
+    const { name, options, optionIndex } = req.body;
 
-        for (let i = 0; i < polls.length; i++) {
-            if (polls[i].name === parent) {
-                let poll = polls[i];
-                if (poll.votes.find(vote => vote.username === username)) {
-                    res.status(400).json({ message: "User has already voted" }); // Send 400 (bad request) if user has already voted
-                    return;
-                } else {
-                    if (!poll.options.includes(choice)) {
-                        res.status(400).json({ message: "Invalid choice" }); // Send 400 (bad request) if choice is invalid
-                        return;
-                    }
-                    poll.add_vote(new Vote(username,parent ,choice));
-                    res.status(200).json({ message: "Vote recorded successfully" }); // Send 200 (OK) if vote is recorded
-                    return;
-                }
-            }
-        }
-
-        // If no matching poll is found, send a 404 (not found) response
-        res.status(404).json({ message: "Poll not found" });
-    } else {
-        res.status(400).json({ message: "This is a POST-only endpoint" }); // Send 400 (bad request) if wrong method
+    if (!name) {
+      res.status(400).json({ message: "Missing poll name" });
+      return;
     }
+
+    try {
+      const client = await clientPromise;
+      const db = client.db("polls"); // Use the "polls" database
+      const pollsCollection = db.collection("polls"); // Use the "polls" collection
+
+      const poll = await pollsCollection.findOne({ name });
+      if (!poll) {
+        res.status(404).json({ message: "No such poll" });
+        return;
+      }
+
+      // If `options` is provided, update the options and reset votes
+      if (options && Array.isArray(options)) {
+        const updatedVotes = Array(options.length).fill(0);
+        await pollsCollection.updateOne(
+          { name },
+          { $set: { options, votes: updatedVotes } }
+        );
+        res.status(200).json({ message: "Poll options updated successfully" });
+        return;
+      }
+
+      // If `optionIndex` is provided, update the votes
+      if (typeof optionIndex === "number") {
+        if (optionIndex < 0 || optionIndex >= poll.options.length) {
+          res.status(400).json({ message: "Invalid option index" });
+          return;
+        }
+
+        const updatedVotes = [...poll.votes];
+        updatedVotes[optionIndex] += 1;
+
+        await pollsCollection.updateOne(
+          { name },
+          { $set: { votes: updatedVotes } }
+        );
+
+        res.status(200).json({ message: "Vote recorded successfully" });
+        return;
+      }
+
+      res.status(400).json({ message: "Missing options or optionIndex" });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ message: "Internal Server Error" });
+    }
+  } else {
+    res.status(400).json({ message: "This is a POST-only endpoint" });
+  }
 };
