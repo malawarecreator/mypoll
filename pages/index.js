@@ -6,16 +6,27 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import clientPromise from "../lib/db";
 
 export async function getServerSideProps() {
-  const client = await clientPromise;
-  const db = client.db("polls");
-  const pollsCollection = db.collection("polls");
-  const polls = await pollsCollection.find({}).toArray();
+  try {
+    const client = await clientPromise;
+    const db = client.db("polls");
+    const pollsCollection = db.collection("polls");
+    const polls = await pollsCollection.find({}).toArray();
 
-  return {
-    props: {
-      polls: JSON.parse(JSON.stringify(polls)),
-    },
-  };
+    console.log("Fetched polls:", polls); // Debugging: Check fetched polls
+
+    return {
+      props: {
+        polls: JSON.parse(JSON.stringify(polls)),
+      },
+    };
+  } catch (error) {
+    console.error("Database error:", error);
+    return {
+      props: {
+        polls: [],
+      },
+    };
+  }
 }
 
 export default function Home({ polls }) {
@@ -40,21 +51,26 @@ export default function Home({ polls }) {
     }
 
     setLoading(true);
-    const res = await fetch('/api/vote', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        optionIndex: optionIndex,
-      }),
-    });
-    setLoading(false);
-    if (res.ok) {
-      setMessage("Vote submitted successfully!");
-    } else {
+    try {
+      const res = await fetch('/api/vote', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          optionIndex: optionIndex,
+        }),
+      });
+      if (res.ok) {
+        setMessage("Vote submitted successfully!");
+      } else {
+        setMessage("Failed to submit vote.");
+      }
+    } catch (error) {
       setMessage("Failed to submit vote.");
+      console.error("Vote error:", error);
     }
+    setLoading(false);
   };
 
   const handleCreatePoll = async () => {
@@ -64,24 +80,29 @@ export default function Home({ polls }) {
     }
 
     setLoading(true);
-    const res = await fetch('/api/createpoll', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        name: newPollName,
-        options: newPollOptions.split(',').map(opt => opt.trim()),
-      }),
-    });
-    setLoading(false);
-    if (res.ok) {
-      setMessage("Poll created successfully!");
-      setNewPollName("");
-      setNewPollOptions("");
-    } else {
+    try {
+      const res = await fetch('/api/createpoll', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: newPollName,
+          options: newPollOptions.split(',').map(opt => opt.trim()),
+        }),
+      });
+      if (res.ok) {
+        setMessage("Poll created successfully!");
+        setNewPollName("");
+        setNewPollOptions("");
+      } else {
+        setMessage("Failed to create poll.");
+      }
+    } catch (error) {
       setMessage("Failed to create poll.");
+      console.error("Create poll error:", error)
     }
+    setLoading(false);
   };
 
   return (
@@ -102,22 +123,26 @@ export default function Home({ polls }) {
         <div className={styles.pollList}>
           <h3>Available Polls</h3>
           <ul>
-            {polls.map((poll) => (
-              <li key={poll._id} className={styles.pollItem}>
-                <strong>{poll.question}</strong>
-                <p>Options:</p>
-                <ul className={styles.optionListInner}>
-                  {poll.options.map((option, index) => (
-                    <li key={index}>
-                      {option} - Votes: {poll.votes && poll.votes[index] ? poll.votes[index] : 0}
-                    </li>
-                  ))}
-                </ul>
-                <button className={styles.voteButton} onClick={() => setSelectedPoll(poll)}>
-                  Vote
-                </button>
-              </li>
-            ))}
+            {polls.map((poll) => {
+              console.log("Individual poll:", poll); // Debugging: Check each poll object
+              return (
+                <li key={poll._id} className={styles.pollItem}>
+                  {poll.question && <strong>{poll.question}</strong>} {/* Display question if it exists */}
+                  {!poll.question && poll.name && <strong>{poll.name}</strong>} {/* display name if question doesnt exist */}
+                  <p>Options:</p>
+                  <ul className={styles.optionListInner}>
+                    {poll.options.map((option, index) => (
+                      <li key={index}>
+                        {option} - Votes: {poll.votes && poll.votes[index] ? poll.votes[index] : 0}
+                      </li>
+                    ))}
+                  </ul>
+                  <button className={styles.voteButton} onClick={() => setSelectedPoll(poll)}>
+                    Vote
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </div>
 
