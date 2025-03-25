@@ -1,212 +1,162 @@
+import axios from 'axios';
 import Head from 'next/head';
-import styles from '../styles/Home.module.css';
-import { useState } from 'react';
-import { Analytics } from '@vercel/analytics/react';
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import clientPromise from "../lib/db";
+import { useState, useEffect } from 'react';
 
-export async function getServerSideProps() {
-  try {
-    const client = await clientPromise;
-    const db = client.db("polls");
-    const pollsCollection = db.collection("polls");
-    const polls = await pollsCollection.find({}).toArray();
+export default function Home() {
+  const [polls, setPolls] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [pollName, setPollName] = useState('');
+  const [voteOption, setVoteOption] = useState(0);
+  const [pollData, setPollData] = useState(null);
+  const [showVoteOptions, setShowVoteOptions] = useState(false);
+  const [question, setQuestion] = useState('');
+  const [options, setOptions] = useState('');
 
-    console.log("Fetched polls:", polls); // Debugging: Check fetched polls
+  useEffect(() => {
+    async function fetchPolls() {
+      try {
+        const response = await axios.get("http://localhost:3000/api/listpolls");
+        setPolls(response.data);
+      } catch (err) {
+        setError(err);
+        console.error("Error fetching polls:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-    return {
-      props: {
-        polls: JSON.parse(JSON.stringify(polls)),
-      },
-    };
-  } catch (error) {
-    console.error("Database error:", error);
-    return {
-      props: {
-        polls: [],
-      },
-    };
-  }
-}
-
-export default function Home({ polls }) {
-  const [selectedPoll, setSelectedPoll] = useState(null);
-  const [selectedOption, setSelectedOption] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [newPollName, setNewPollName] = useState("");
-  const [newPollOptions, setNewPollOptions] = useState("");
+    fetchPolls();
+  }, []);
 
   const handleVote = async () => {
-    if (!selectedPoll || !selectedOption) {
-      setMessage("Please select an option.");
-      return;
-    }
-
-    const optionIndex = selectedPoll.options.indexOf(selectedOption);
-
-    if (optionIndex === -1) {
-      setMessage("Invalid option selected.");
-      return;
-    }
-
-    setLoading(true);
     try {
-      const res = await fetch('/api/vote', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          optionIndex: optionIndex,
-        }),
+      await axios.post("http://localhost:3000/api/vote", {
+        name: pollName,
+        optionIndex: voteOption,
       });
-      if (res.ok) {
-        setMessage("Vote submitted successfully!");
-      } else {
-        setMessage("Failed to submit vote.");
-      }
-    } catch (error) {
-      setMessage("Failed to submit vote.");
-      console.error("Vote error:", error);
+      alert("Vote submitted!");
+      fetchPollData();
+    } catch (err) {
+      console.error("Error voting:", err);
+      alert("Error submitting vote.");
     }
-    setLoading(false);
+  };
+
+  const fetchPollData = async () => {
+    try {
+      const response = await axios.get(`http://localhost:3000/api/getpolldata?name=${pollName}`);
+      setPollData(response.data);
+      setShowVoteOptions(true);
+    } catch (err) {
+      console.error("Error fetching poll data:", err);
+      setPollData(null);
+      setShowVoteOptions(false);
+      alert('Poll not found');
+    }
+  };
+
+  const handleSearch = () => {
+    fetchPollData();
   };
 
   const handleCreatePoll = async () => {
-    if (!newPollName || !newPollOptions) {
-      setMessage("Please fill out all fields.");
-      return;
-    }
-
-    setLoading(true);
     try {
-      const res = await fetch('/api/createpoll', {
+    
+      if (!question || !options) {
+        alert("Please enter a question and options.");
+        return; 
+      }
+  
+      const optionsArray = options.split(',').map((option) => option.trim());
+  
+      if (optionsArray.length < 2) {
+        alert("Please provide at least two options.");
+        return; 
+      }
+  
+     
+      const postData = {
+        name: `${question}`,
+        options: optionsArray,
+      };
+  
+      console.log("Sending poll creation data:", postData); 
+  
+      const response = await fetch("http://localhost:3000/api/createpoll", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: newPollName,
-          options: newPollOptions.split(',').map(opt => opt.trim()),
-        }),
+        body: JSON.stringify(postData),
       });
-      if (res.ok) {
-        setMessage("Poll created successfully!");
-        setNewPollName("");
-        setNewPollOptions("");
+  
+      if (response.ok) { 
+        alert("Poll created successfully!");
+  
+        try {
+          const pollsResponse = await fetch("http://localhost:3000/api/listpolls");
+          if (pollsResponse.ok) {
+            const pollsData = await pollsResponse.json();
+            setPolls(pollsData);
+          } else {
+            console.error("Error fetching polls after creation:", pollsResponse.status);
+            alert("Poll Created, but error refreshing poll list.");
+          }
+        } catch (pollsError) {
+          console.error("Error fetching polls after creation:", pollsError);
+          alert("Poll Created, but error refreshing poll list.");
+        }
       } else {
-        setMessage("Failed to create poll.");
+        alert(`Poll creation failed: Server returned status ${response.status}`);
+        console.error(`Poll creation failed: Server returned status ${response.status}`, await response.text()); // Log the response body
       }
-    } catch (error) {
-      setMessage("Failed to create poll.");
-      console.error("Create poll error:", error)
+    } catch (err) {
+    
+      console.error("Error creating poll:", err);
+      alert("An error occurred while creating the poll.");
     }
-    setLoading(false);
   };
 
   return (
-    <div className={styles.container}>
+    <div style={{ minHeight: '100vh', margin: 0, fontFamily: 'Arial, sans-serif', backgroundColor: '#ffff', color: '#333' }}>
       <Head>
         <title>MyPoll</title>
-        <link rel="icon" href="/favicon.ico" />
       </Head>
-
-      <header className={styles.header}>
-        <h1>MyPoll</h1>
-        <p className={styles.subtitle}>Anonymous Voting</p>
-      </header>
-
-      {message && <p className={styles.message}>{message}</p>}
-
-      <div className={styles.mainContent}>
-        <div className={styles.pollList}>
-          <h3>Available Polls</h3>
-          <ul>
-            {polls.map((poll) => {
-              console.log("Individual poll:", poll); // Debugging: Check each poll object
-              return (
-                <li key={poll._id} className={styles.pollItem}>
-                  {poll.question && <strong>{poll.question}</strong>} {/* Display question if it exists */}
-                  {!poll.question && poll.name && <strong>{poll.name}</strong>} {/* display name if question doesnt exist */}
-                  <p>Options:</p>
-                  <ul className={styles.optionListInner}>
-                    {poll.options.map((option, index) => (
-                      <li key={index}>
-                        {option} - Votes: {poll.votes && poll.votes[index] ? poll.votes[index] : 0}
-                      </li>
-                    ))}
-                  </ul>
-                  <button className={styles.voteButton} onClick={() => setSelectedPoll(poll)}>
-                    Vote
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
+      <h1 style={{ textAlign: 'center', margin: '20px 0', color: '#007bff' }}>MyPoll</h1>
+      <p style={{ fontStyle: 'italic', textAlign: 'center', marginBottom: '30px' }}>Anonymous Voting</p>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'flex-start', gap: '20px', flexWrap: 'wrap', padding: '20px' }}>
+        <div style={{ width: '300px', minHeight: '300px', borderRadius: '15px', border: '2px solid #007bff', backgroundColor: '#e9f7ff', padding: '20px', fontWeight: 'bolder', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
+          <h2 style={{ marginBottom: '15px', color: '#0056b3' }}>Available Polls</h2>
+          <pre id="json" style={{ overflowY: 'auto', maxHeight: '200px', padding: '10px', backgroundColor: '#f0f0f0', borderRadius: '5px', fontSize: '0.9em', fontFamily: 'monospace', textAlign: 'left', width: '100%', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch', msOverflowStyle: 'none' }}>
+            <code style={{ whiteSpace: 'pre-wrap' }}>{loading ? "Loading..." : error ? `Error: ${error.message}` : polls ? JSON.stringify(polls, null, 2) : "No polls available."}</code>
+          </pre>
         </div>
-
-        <div className={styles.voteBox}>
-          {selectedPoll ? (
-            <div>
-              <h2>{selectedPoll.question}</h2>
-              <div className={styles.optionList}>
-                {selectedPoll.options.map((option) => (
-                  <label key={option} className={styles.optionLabel}>
-                    <input
-                      type="radio"
-                      name="poll"
-                      value={option}
-                      onChange={() => setSelectedOption(option)}
-                    />
-                    {option}
-                  </label>
-                ))}
-              </div>
-              <button
-                className={styles.voteSubmitButton}
-                onClick={handleVote}
-                disabled={loading || !selectedOption}
-              >
-                {loading ? 'Submitting...' : 'Vote'}
-              </button>
-              <button className={styles.backButton} onClick={() => setSelectedPoll(null)}>
-                Back
-              </button>
-            </div>
-          ) : (
-            <p>Select a poll to vote</p>
+        <div style={{ width: '300px', minHeight: '300px', borderRadius: '15px', border: '2px solid #28a745', backgroundColor: '#e9ffe9', padding: '20px', fontWeight: 'bolder', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
+          <h2 style={{ marginBottom: '15px', color: '#1e7e34' }}>Voting</h2>
+          <input id="name" placeholder='Name of the Poll' value={pollName} onChange={(e) => setPollName(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1em', marginBottom: '10px' }} />
+          <button onClick={handleSearch} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: 'none', backgroundColor: '#007bff', color: 'white', fontSize: '1em', cursor: 'pointer', marginBottom: '10px' }}>Search</button>
+          {showVoteOptions && pollData && (
+            <select value={voteOption} onChange={(e) => setVoteOption(parseInt(e.target.value))} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1em', marginBottom: '10px' }}>
+              {pollData.options.map((option, index) => (
+                <option key={index} value={index}>{option}</option>
+              ))}
+            </select>
+          )}
+          {showVoteOptions && <button onClick={handleVote} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: 'none', backgroundColor: '#007bff', color: 'white', fontSize: '1em', cursor: 'pointer' }}>Vote</button>}
+          {pollData && (
+            <pre style={{ textAlign: "left", width: '100%', overflowY: 'auto', maxHeight: '100px', backgroundColor: '#f0f0f0', padding: '10px', borderRadius: '5px' }}>
+              <code>{JSON.stringify(pollData, null, 2)}</code>
+            </pre>
           )}
         </div>
+        <div style={{ width: '300px', minHeight: '300px', borderRadius: '15px', border: '2px solid #ffc107', backgroundColor: '#fffbe6', padding: '20px', fontWeight: 'bolder', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
+          <h2 style={{ marginBottom: '15px', color: '#856404' }}>Create Poll</h2>
+          <input id="question" placeholder='Enter Question' value={question} onChange={(e) => setQuestion(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1em', marginBottom: '10px' }} />
+          <input id="options" placeholder='Enter Options (comma-separated)' value={options} onChange={(e) => setOptions(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1em', marginBottom: '10px' }} />
+          <button onClick={handleCreatePoll} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: 'none', backgroundColor: '#28a745', color: 'white', fontSize: '1em', cursor: 'pointer' }}>Create</button>
+        </div>
       </div>
-
-      <div className={styles.createPollBox}>
-        <h3>Create a Poll</h3>
-        <input
-          type="text"
-          className={styles.input}
-          placeholder="Poll Question"
-          value={newPollName}
-          onChange={(e) => setNewPollName(e.target.value)}
-        />
-        <input
-          type="text"
-          className={styles.input}
-          placeholder="Options (comma-separated)"
-          value={newPollOptions}
-          onChange={(e) => setNewPollOptions(e.target.value)}
-        />
-        <button
-          className={styles.createPollButton}
-          onClick={handleCreatePoll}
-          disabled={loading}
-        >
-          {loading ? 'Creating...' : 'Create Poll'}
-        </button>
-      </div>
-
-      <Analytics />
-      <SpeedInsights />
     </div>
   );
 }
