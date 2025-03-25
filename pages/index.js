@@ -145,9 +145,16 @@ export default function Home() {
           )}
           {showVoteOptions && <button onClick={handleVote} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: 'none', backgroundColor: '#007bff', color: 'white', fontSize: '1em', cursor: 'pointer' }}>Vote</button>}
           {pollData && (
-            <pre style={{ textAlign: "left", width: '100%', overflowY: 'auto', maxHeight: '100px', backgroundColor: '#f0f0f0', padding: '10px', borderRadius: '5px' }}>
-              <code>{JSON.stringify(pollData, null, 2)}</code>
-            </pre>
+            <div style={{ textAlign: "left", width: '100%', overflowY: 'auto', maxHeight: '150px', backgroundColor: '#f0f0f0', padding: '10px', borderRadius: '5px', fontSize: '0.9em' }}>
+              <h3 style={{ marginBottom: '10px', color: '#0056b3' }}>Poll Details</h3>
+              <p><strong>Poll Name:</strong> {pollData.name}</p>
+              <p><strong>Options:</strong></p>
+              <ul style={{ paddingLeft: '20px', margin: 0 }}>
+                {pollData.options.map((option, index) => (
+                  <li key={index} style={{ marginBottom: '5px' }}>{option}</li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
         <div style={{ width: '300px', minHeight: '300px', borderRadius: '15px', border: '2px solid #ffc107', backgroundColor: '#fffbe6', padding: '20px', fontWeight: 'bolder', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
