@@ -16,7 +16,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchPolls() {
       try {
-        const response = await axios.get("http://localhost:3000/api/listpolls");
+        const response = await axios.get("/api/listpolls");
         setPolls(response.data);
       } catch (err) {
         setError(err);
@@ -31,7 +31,7 @@ export default function Home() {
 
   const handleVote = async () => {
     try {
-      await axios.post("http://localhost:3000/api/vote", {
+      await axios.post("/api/vote", {
         name: pollName,
         optionIndex: voteOption,
       });
@@ -45,7 +45,7 @@ export default function Home() {
 
   const fetchPollData = async () => {
     try {
-      const response = await axios.get(`http://localhost:3000/api/getpolldata?name=${pollName}`);
+      const response = await axios.get(`/api/getpolldata?name=${pollName}`);
       setPollData(response.data);
       setShowVoteOptions(true);
     } catch (err) {
@@ -83,7 +83,7 @@ export default function Home() {
   
       console.log("Sending poll creation data:", postData); 
   
-      const response = await fetch("http://localhost:3000/api/createpoll", {
+      const response = await fetch("/api/createpoll", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -95,7 +95,7 @@ export default function Home() {
         alert("Poll created successfully!");
   
         try {
-          const pollsResponse = await fetch("http://localhost:3000/api/listpolls");
+          const pollsResponse = await fetch("/api/listpolls");
           if (pollsResponse.ok) {
             const pollsData = await pollsResponse.json();
             setPolls(pollsData);
