@@ -23,6 +23,8 @@ export default function Home({ polls }) {
   const [selectedOption, setSelectedOption] = useState(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [newPollName, setNewPollName] = useState("");
+  const [newPollOptions, setNewPollOptions] = useState("");
 
   const handleVote = async () => {
     if (!selectedPoll || !selectedOption) {
@@ -55,8 +57,8 @@ export default function Home({ polls }) {
     }
   };
 
-  const handleCreatePoll = async (pollName, options) => {
-    if (!pollName || !options) {
+  const handleCreatePoll = async () => {
+    if (!newPollName || !newPollOptions) {
       setMessage("Please fill out all fields.");
       return;
     }
@@ -68,13 +70,15 @@ export default function Home({ polls }) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        name: pollName,
-        options: options.split(',').map(opt => opt.trim()),
+        name: newPollName,
+        options: newPollOptions.split(',').map(opt => opt.trim()),
       }),
     });
     setLoading(false);
     if (res.ok) {
       setMessage("Poll created successfully!");
+      setNewPollName("");
+      setNewPollOptions("");
     } else {
       setMessage("Failed to create poll.");
     }
@@ -95,13 +99,20 @@ export default function Home({ polls }) {
       {message && <p className={styles.message}>{message}</p>}
 
       <div className={styles.mainContent}>
-        {/* Polls List (JSON format) */}
         <div className={styles.pollList}>
           <h3>Available Polls</h3>
           <ul>
             {polls.map((poll) => (
               <li key={poll._id} className={styles.pollItem}>
-                <code className={styles.pollCode}>{JSON.stringify(poll, null, 2)}</code>
+                <strong>{poll.question}</strong>
+                <p>Options:</p>
+                <ul className={styles.optionListInner}>
+                  {poll.options.map((option, index) => (
+                    <li key={index}>
+                      {option} - Votes: {poll.votes && poll.votes[index] ? poll.votes[index] : 0}
+                    </li>
+                  ))}
+                </ul>
                 <button className={styles.voteButton} onClick={() => setSelectedPoll(poll)}>
                   Vote
                 </button>
@@ -110,7 +121,6 @@ export default function Home({ polls }) {
           </ul>
         </div>
 
-        {/* Voting Box */}
         <div className={styles.voteBox}>
           {selectedPoll ? (
             <div>
@@ -145,26 +155,26 @@ export default function Home({ polls }) {
         </div>
       </div>
 
-      {/* Poll Creation Box */}
       <div className={styles.createPollBox}>
         <h3>Create a Poll</h3>
         <input
           type="text"
           className={styles.input}
-          placeholder="Poll Name"
+          placeholder="Poll Question"
+          value={newPollName}
+          onChange={(e) => setNewPollName(e.target.value)}
         />
         <input
           type="text"
           className={styles.input}
           placeholder="Options (comma-separated)"
+          value={newPollOptions}
+          onChange={(e) => setNewPollOptions(e.target.value)}
         />
         <button
           className={styles.createPollButton}
-          onClick={(e) => {
-            const pollName = e.target.previousSibling.previousSibling.value;
-            const options = e.target.previousSibling.value;
-            handleCreatePoll(pollName, options);
-          }}
+          onClick={handleCreatePoll}
+          disabled={loading}
         >
           {loading ? 'Creating...' : 'Create Poll'}
         </button>
