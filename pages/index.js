@@ -134,7 +134,7 @@ export default function Home() {
         </div>
         <div style={{ width: '300px', minHeight: '300px', borderRadius: '15px', border: '2px solid #28a745', backgroundColor: '#e9ffe9', padding: '20px', fontWeight: 'bolder', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)' }}>
           <h2 style={{ marginBottom: '15px', color: '#1e7e34' }}>Voting</h2>
-          <input id="name" placeholder='Name of the Poll' value={pollName} onChange={(e) => setPollName(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1em', marginBottom: '10px' }} />
+          <input id="name" placeholder='Question of the Poll' value={pollName} onChange={(e) => setPollName(e.target.value)} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1em', marginBottom: '10px' }} />
           <button onClick={handleSearch} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: 'none', backgroundColor: '#007bff', color: 'white', fontSize: '1em', cursor: 'pointer', marginBottom: '10px' }}>Search</button>
           {showVoteOptions && pollData && (
             <select value={voteOption} onChange={(e) => setVoteOption(parseInt(e.target.value))} style={{ width: '100%', padding: '10px', borderRadius: '5px', border: '1px solid #ccc', fontSize: '1em', marginBottom: '10px' }}>
